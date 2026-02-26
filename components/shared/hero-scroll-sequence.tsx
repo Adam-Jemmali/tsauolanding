@@ -38,26 +38,71 @@ export function HeroScrollSequence() {
   const rafRef = useRef<number>(0);
   const prefersReducedMotion = useReducedMotion();
 
-  // Load images - match UI inspo pattern
+  // Load images - optimized for production (batched loading)
   useEffect(() => {
-    const imgs: HTMLImageElement[] = [];
+    const imgs: HTMLImageElement[] = new Array(TOTAL_FRAMES);
     let mounted = true;
     loadedCountRef.current = 0;
+    const BATCH_SIZE = 20; // Load 20 images at a time
+    let currentBatch = 0;
 
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
-      const img = new Image();
-      img.src = frameSrc(i);
-      img.onload = () => {
-        if (!mounted) return;
-        loadedCountRef.current++;
-        setLoadPercent(Math.round((loadedCountRef.current / TOTAL_FRAMES) * 100));
-        if (loadedCountRef.current >= TOTAL_FRAMES) {
-          setReady(true);
+    const loadBatch = (startIndex: number, endIndex: number) => {
+      for (let i = startIndex; i < endIndex && i < TOTAL_FRAMES; i++) {
+        const img = new Image();
+        // Set fetchpriority for critical frames (first batch)
+        if (startIndex === 0 && i < 10) {
+          (img as any).fetchPriority = 'high';
         }
-      };
-      imgs.push(img);
-    }
+        img.src = frameSrc(i);
+        
+        img.onload = () => {
+          if (!mounted) return;
+          imgs[i] = img;
+          loadedCountRef.current++;
+          setLoadPercent(Math.round((loadedCountRef.current / TOTAL_FRAMES) * 100));
+          if (loadedCountRef.current >= TOTAL_FRAMES) {
+            setReady(true);
+          }
+        };
+        
+        img.onerror = () => {
+          if (!mounted) return;
+          // Still count as loaded to prevent hanging
+          loadedCountRef.current++;
+          setLoadPercent(Math.round((loadedCountRef.current / TOTAL_FRAMES) * 100));
+          if (loadedCountRef.current >= TOTAL_FRAMES) {
+            setReady(true);
+          }
+        };
+      }
+    };
+
+    // Load first batch immediately (critical frames)
+    loadBatch(0, Math.min(BATCH_SIZE, TOTAL_FRAMES));
     imagesRef.current = imgs;
+
+    // Load remaining batches with slight delay to avoid overwhelming the network
+    const loadNextBatch = () => {
+      if (!mounted) return;
+      currentBatch++;
+      const startIndex = currentBatch * BATCH_SIZE;
+      const endIndex = Math.min(startIndex + BATCH_SIZE, TOTAL_FRAMES);
+      
+      if (startIndex < TOTAL_FRAMES) {
+        // Use requestIdleCallback if available, otherwise setTimeout
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          requestIdleCallback(() => loadBatch(startIndex, endIndex), { timeout: 100 });
+        } else {
+          setTimeout(() => loadBatch(startIndex, endIndex), 50);
+        }
+        loadNextBatch();
+      }
+    };
+
+    // Start loading next batches after a short delay
+    setTimeout(() => {
+      if (mounted) loadNextBatch();
+    }, 100);
 
     return () => {
       mounted = false;
