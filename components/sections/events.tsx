@@ -67,7 +67,7 @@ const pastEvents = [
     location: "UOttawa Campus DMS ",
     time: "4-7pm",
     capacity: 40,
-    googleFormUrl: "https://forms.gle/YOUR_FORM_ID_HERE", // Replace with your actual Google Form URL
+    googleFormUrl: " ", // Replace with your actual Google Form URL
   },
 
 ];
