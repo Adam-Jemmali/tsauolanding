@@ -120,7 +120,6 @@ export function Hero() {
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
-    layoutEffect: false, // Use layoutEffect: false to avoid position warnings
   });
 
   const imageY = useTransform(scrollYProgress, [0, 1], [0, -100]);
