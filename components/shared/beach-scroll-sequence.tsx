@@ -4,9 +4,8 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import NextImage from "next/image";
 
-const FRAME_START = 1;
-const FRAME_END = 240;
-const TOTAL_FRAMES = FRAME_END - FRAME_START + 1;
+const TOTAL_FRAMES = 240;
+const BATCH_SIZE = 20;
 
 function frameSrc(index: number): string {
   const frameNum = String(index + 1).padStart(3, "0");
@@ -30,13 +29,13 @@ interface BeachScrollSequenceProps {
   id?: string;
 }
 
-function getOpacity(progress: number, o: TextOverlay): number {
+function getOverlayOpacity(progress: number, o: TextOverlay): number {
   const fadeIn = Math.min(
-    Math.max((progress - o.inStart) / ((o.inEnd - o.inStart) || 0.01), 0),
+    Math.max((progress - o.inStart) / (o.inEnd - o.inStart || 0.01), 0),
     1
   );
   const fadeOut = Math.min(
-    Math.max((o.outEnd - progress) / ((o.outEnd - o.outStart) || 0.01), 0),
+    Math.max((o.outEnd - progress) / (o.outEnd - o.outStart || 0.01), 0),
     1
   );
   return Math.min(fadeIn, fadeOut);
@@ -51,118 +50,117 @@ export function BeachScrollSequence({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imagesRef = useRef<HTMLImageElement[]>([]);
+  const progressRef = useRef(0);
   const [progress, setProgress] = useState(0);
   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
   const loadedCountRef = useRef(0);
-  const [loadPercent, setLoadPercent] = useState(0);
   const [ready, setReady] = useState(false);
-  const rafRef = useRef<number>(0);
+  const rafRef = useRef(0);
+  const isVisibleRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
+  const lastDrawnFrameRef = useRef(-1);
 
-  // Load images - optimized for production (batched loading)
+  // Load images in batches
   useEffect(() => {
     const imgs: HTMLImageElement[] = new Array(TOTAL_FRAMES);
     let mounted = true;
     loadedCountRef.current = 0;
-    const BATCH_SIZE = 20; // Load 20 images at a time
-    let currentBatch = 0;
 
-    const loadBatch = (startIndex: number, endIndex: number) => {
-      for (let i = startIndex; i < endIndex && i < TOTAL_FRAMES; i++) {
-        const img = new Image();
-        // Set fetchpriority for critical frames (first batch)
-        if (startIndex === 0 && i < 10) {
-          (img as any).fetchPriority = 'high';
-        }
-        img.src = frameSrc(i);
-        
-        img.onload = () => {
-          if (!mounted) return;
-          imgs[i] = img;
-          loadedCountRef.current++;
-          setLoadPercent(Math.round((loadedCountRef.current / TOTAL_FRAMES) * 100));
-          if (loadedCountRef.current >= TOTAL_FRAMES) {
-            setReady(true);
-          }
-        };
-        
-        img.onerror = () => {
-          if (!mounted) return;
-          // Still count as loaded to prevent hanging
-          loadedCountRef.current++;
-          setLoadPercent(Math.round((loadedCountRef.current / TOTAL_FRAMES) * 100));
-          if (loadedCountRef.current >= TOTAL_FRAMES) {
-            setReady(true);
-          }
-        };
+    function onImageReady() {
+      if (!mounted) return;
+      loadedCountRef.current++;
+      if (loadedCountRef.current >= TOTAL_FRAMES) {
+        setReady(true);
       }
-    };
+    }
 
-    // Load first batch immediately (critical frames)
-    loadBatch(0, Math.min(BATCH_SIZE, TOTAL_FRAMES));
+    function loadBatch(start: number, end: number) {
+      for (let i = start; i < end && i < TOTAL_FRAMES; i++) {
+        const img = new Image();
+        if (i < 5) (img as any).fetchPriority = "high";
+        img.src = frameSrc(i);
+        img.onload = () => {
+          imgs[i] = img;
+          onImageReady();
+        };
+        img.onerror = onImageReady;
+      }
+    }
+
+    loadBatch(0, BATCH_SIZE);
     imagesRef.current = imgs;
 
-    // Load remaining batches with slight delay to avoid overwhelming the network
-    const loadNextBatch = () => {
+    let batch = 1;
+    function scheduleNext() {
       if (!mounted) return;
-      currentBatch++;
-      const startIndex = currentBatch * BATCH_SIZE;
-      const endIndex = Math.min(startIndex + BATCH_SIZE, TOTAL_FRAMES);
-      
-      if (startIndex < TOTAL_FRAMES) {
-        // Use requestIdleCallback if available, otherwise setTimeout
-        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-          requestIdleCallback(() => loadBatch(startIndex, endIndex), { timeout: 100 });
-        } else {
-          setTimeout(() => loadBatch(startIndex, endIndex), 50);
-        }
-        loadNextBatch();
-      }
-    };
-
-    // Start loading next batches after a short delay
-    setTimeout(() => {
-      if (mounted) loadNextBatch();
-    }, 100);
+      const start = batch * BATCH_SIZE;
+      if (start >= TOTAL_FRAMES) return;
+      const end = Math.min(start + BATCH_SIZE, TOTAL_FRAMES);
+      setTimeout(() => {
+        loadBatch(start, end);
+        batch++;
+        scheduleNext();
+      }, 50);
+    }
+    scheduleNext();
 
     return () => {
       mounted = false;
     };
   }, []);
 
-  // Scroll progress calculation - match UI inspo pattern
+  // Track visibility
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        isVisibleRef.current = entry.isIntersecting;
+      },
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Scroll progress
   useEffect(() => {
     const onScroll = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const scrollable = containerRef.current.scrollHeight - window.innerHeight;
-      setProgress(Math.min(Math.max(-rect.top / scrollable, 0), 1));
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const scrollable = el.scrollHeight - window.innerHeight;
+      const p = Math.min(Math.max(-rect.top / scrollable, 0), 1);
+      progressRef.current = p;
+      setProgress(p);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Canvas dimensions - match UI inspo pattern
+  // Dimensions
   useEffect(() => {
-    const update = () => setDimensions({ w: window.innerWidth, h: window.innerHeight });
+    const update = () =>
+      setDimensions({ w: window.innerWidth, h: window.innerHeight });
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Canvas setup - match UI inspo pattern
+  // Canvas setup
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || dimensions.w === 0) return;
     const dpr = Math.min(window.devicePixelRatio, 2);
     canvas.width = dimensions.w * dpr;
     canvas.height = dimensions.h * dpr;
     const ctx = canvas.getContext("2d");
     if (ctx) ctx.scale(dpr, dpr);
+    lastDrawnFrameRef.current = -1;
   }, [dimensions]);
 
-  // Draw frame - simplified to match UI inspo pattern
+  // Draw frame
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -172,48 +170,44 @@ export function BeachScrollSequence({
     const dpr = Math.min(window.devicePixelRatio, 2);
     const dw = canvas.width / dpr;
     const dh = canvas.height / dpr;
-
     if (dw === 0 || dh === 0) return;
 
-    const effectiveProgress = infiniteLoop ? (progress % 1) : progress;
-    const idx = Math.min(Math.floor(effectiveProgress * (TOTAL_FRAMES - 1)), TOTAL_FRAMES - 1);
-    const img = imagesRef.current[idx];
+    const effectiveProgress = infiniteLoop
+      ? progressRef.current % 1
+      : progressRef.current;
+    const idx = Math.min(
+      Math.floor(effectiveProgress * (TOTAL_FRAMES - 1)),
+      TOTAL_FRAMES - 1
+    );
 
+    if (idx === lastDrawnFrameRef.current) return;
+
+    const img = imagesRef.current[idx];
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.clearRect(0, 0, dw, dh);
       const scale = Math.max(dw / img.naturalWidth, dh / img.naturalHeight);
       const sw = img.naturalWidth * scale;
       const sh = img.naturalHeight * scale;
       ctx.drawImage(img, (dw - sw) / 2, (dh - sh) / 2, sw, sh);
+      lastDrawnFrameRef.current = idx;
     }
+  }, [infiniteLoop]);
 
-    // Text overlays
-    if (textOverlays.length > 0) {
-      const maxTextOpacity = Math.max(...textOverlays.map((o) => getOpacity(progress, o)));
-
-      if (maxTextOpacity > 0) {
-        // Soft overall tint
-        ctx.fillStyle = `rgba(0, 102, 204, ${0.15 * maxTextOpacity})`;
-        ctx.fillRect(0, 0, dw, dh);
-
-        // Bottom fade
-        const grad = ctx.createLinearGradient(0, dh * 0.7, 0, dh);
-        grad.addColorStop(0, `rgba(0, 68, 153, 0)`);
-        grad.addColorStop(1, `rgba(0, 68, 153, ${0.6 * maxTextOpacity})`);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, dw, dh);
-      }
-    }
-  }, [progress, infiniteLoop, textOverlays]);
-
-  // RAF loop - match UI inspo pattern
+  // RAF loop — only when visible
   useEffect(() => {
+    let active = true;
     const loop = () => {
-      drawFrame();
+      if (!active) return;
+      if (isVisibleRef.current) {
+        drawFrame();
+      }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      active = false;
+      cancelAnimationFrame(rafRef.current);
+    };
   }, [drawFrame]);
 
   return (
@@ -221,8 +215,7 @@ export function BeachScrollSequence({
       ref={containerRef}
       className={`relative h-[500vh] ${className}`}
       id={id}
-      suppressHydrationWarning
-      style={{ position: 'relative' }}
+      style={{ position: "relative" }}
     >
       <div className="sticky top-0 h-screen w-full overflow-hidden bg-black">
         <canvas
@@ -231,8 +224,7 @@ export function BeachScrollSequence({
           style={{ width: dimensions.w, height: dimensions.h }}
         />
 
-
-        {/* Fallback image - only show when canvas is not ready */}
+        {/* Fallback */}
         {(!ready || dimensions.w === 0) && (
           <div className="absolute inset-0 z-0">
             <NextImage
@@ -242,24 +234,20 @@ export function BeachScrollSequence({
               className="object-cover"
               sizes="100vw"
               priority
-              suppressHydrationWarning
             />
           </div>
         )}
 
         {/* Text overlays */}
         {textOverlays.map((overlay, i) => {
-          const opacity = getOpacity(progress, overlay);
+          const opacity = getOverlayOpacity(progress, overlay);
           if (opacity <= 0) return null;
 
           return (
             <div
               key={i}
               className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6"
-              style={{
-                opacity,
-                transform: `translateY(${(1 - opacity) * 15}px)`,
-              }}
+              style={{ opacity }}
             >
               {overlay.line1 && (
                 <h1
@@ -267,26 +255,30 @@ export function BeachScrollSequence({
                   style={{
                     fontSize: "clamp(3rem, 12vw, 10rem)",
                     letterSpacing: "0.08em",
-                    textShadow: "0 4px 60px rgba(0, 0, 0, 0.8), 0 2px 12px rgba(0, 0, 0, 0.6)",
+                    textShadow:
+                      "0 4px 60px rgba(0, 0, 0, 0.8), 0 2px 12px rgba(0, 0, 0, 0.6)",
                   }}
                 >
                   {overlay.line1}
                 </h1>
               )}
               {overlay.sub && (
-                <p className="mt-6 text-center text-xl font-medium tracking-[0.12em] text-white md:text-3xl" style={{ textShadow: "0 2px 30px rgba(0, 0, 0, 0.8)" }}>
+                <p
+                  className="mt-6 text-center text-xl font-medium tracking-[0.12em] text-white md:text-3xl"
+                  style={{
+                    textShadow: "0 2px 30px rgba(0, 0, 0, 0.8)",
+                  }}
+                >
                   {overlay.sub}
                 </p>
               )}
               {overlay.cta && (
-                <motion.a
+                <a
                   href="#contact"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="mt-12 border border-white/30 px-14 py-4 text-[11px] font-semibold tracking-[0.4em] uppercase text-white transition-all duration-500 hover:bg-white hover:text-brand-blue"
+                  className="mt-12 border border-white/30 px-14 py-4 text-[11px] font-semibold tracking-[0.4em] uppercase text-white transition-colors duration-300 hover:bg-white hover:text-brand-blue"
                 >
                   {overlay.cta}
-                </motion.a>
+                </a>
               )}
             </div>
           );
@@ -297,7 +289,11 @@ export function BeachScrollSequence({
           <div className="absolute inset-x-0 bottom-12 z-10 flex flex-col items-center">
             <motion.div
               animate={{ y: [0, 6, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
               className="flex flex-col items-center gap-3"
             >
               <span className="text-[9px] font-semibold tracking-[0.5em] uppercase text-white/40">

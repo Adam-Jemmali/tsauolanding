@@ -50,7 +50,6 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
-        // TSA brand colors - Tunisian blue, white, black
         brand: {
           blue: "#0066CC",
           "blue-dark": "#004499",
@@ -74,10 +73,7 @@ const config: Config = {
       animation: {
         "fade-up": "fadeUp 0.6s ease-out forwards",
         "fade-in": "fadeIn 0.4s ease-out forwards",
-        "slide-in": "slideIn 0.5s ease-out forwards",
-        "glow-pulse": "glowPulse 2s ease-in-out infinite",
         marquee: "marquee 30s linear infinite",
-        "marquee-reverse": "marquee-reverse 30s linear infinite",
       },
       keyframes: {
         fadeUp: {
@@ -88,37 +84,13 @@ const config: Config = {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
-        slideIn: {
-          "0%": { opacity: "0", transform: "translateX(-20px)" },
-          "100%": { opacity: "1", transform: "translateX(0)" },
-        },
-        glowPulse: {
-          "0%, 100%": {
-            boxShadow: "0 0 20px rgba(0, 102, 204, 0.3)",
-          },
-          "50%": {
-            boxShadow: "0 0 40px rgba(0, 102, 204, 0.5)",
-          },
-        },
         marquee: {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-50%)" },
         },
-        "marquee-reverse": {
-          "0%": { transform: "translateX(-50%)" },
-          "100%": { transform: "translateX(0)" },
-        },
-      },
-      backgroundImage: {
-        "noise-texture":
-          "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E\")",
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
       boxShadow: {
         glow: "0 0 20px rgba(0, 102, 204, 0.3)",
-        "glow-lg": "0 0 40px rgba(0, 102, 204, 0.4)",
         soft: "0 4px 20px rgba(0, 0, 0, 0.08)",
         "soft-lg": "0 8px 40px rgba(0, 0, 0, 0.12)",
       },

@@ -47,8 +47,9 @@ export function Footer() {
               <span>TSA @ uOttawa</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Celebrating Tunisian culture and building community at University of Ottawa.
-              Open to all students who want to experience our vibrant culture.
+              Celebrating Tunisian culture and building community at University
+              of Ottawa. Open to all students who want to experience our vibrant
+              culture.
             </p>
           </div>
 
@@ -59,6 +60,7 @@ export function Footer() {
               {quickLinks.map((link) => (
                 <button
                   key={link.href}
+                  type="button"
                   onClick={() => handleNavClick(link.href)}
                   className="text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
@@ -78,9 +80,11 @@ export function Footer() {
                   <a
                     key={link.label}
                     href={link.href}
-                    target={link.href.startsWith("mailto") ? undefined : "_blank"}
+                    target={
+                      link.href.startsWith("mailto") ? undefined : "_blank"
+                    }
                     rel="noopener noreferrer"
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-all hover:bg-brand-blue hover:text-white hover:shadow-glow"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-brand-blue hover:text-white"
                     aria-label={link.label}
                   >
                     <Icon className="h-5 w-5" />
