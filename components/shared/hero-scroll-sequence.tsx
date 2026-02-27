@@ -198,20 +198,6 @@ export function HeroScrollSequence() {
           style={{ width: dimensions.w, height: dimensions.h }}
         />
 
-        {/* Loading state */}
-        {!ready && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-gradient-to-br from-brand-blue/5 via-white to-brand-blue/10">
-            <div className="relative h-px w-40 overflow-hidden bg-white/10 rounded-full">
-              <div
-                className="absolute inset-y-0 left-0 bg-brand-blue transition-all duration-300"
-                style={{ width: `${loadPercent}%` }}
-              />
-            </div>
-            <span className="mt-5 text-[10px] font-medium tabular-nums tracking-[0.5em] text-brand-blue/60">
-              {loadPercent}%
-            </span>
-          </div>
-        )}
 
         {/* Fallback image - only show when canvas is not ready */}
         {(!ready || dimensions.w === 0) && (

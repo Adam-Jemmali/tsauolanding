@@ -74,7 +74,7 @@ const pastEvents = [
 
 
 const eventImages = [
- "/events/teapost.png",
+  "/events/teapost.png",
 
 
 ];
