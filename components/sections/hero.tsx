@@ -256,7 +256,7 @@ export function Hero() {
               </>
             ) : prefersReducedMotion ? (
               <>
-                Tunisian Student{" "}
+            Tunisian Student{" "}
                 <span className="gradient-text">Association</span>
               </>
             ) : (
@@ -331,13 +331,13 @@ export function Hero() {
                 prefersReducedMotion
                   ? {}
                   : {
-                    boxShadow: [
+                      boxShadow: [
                       "0 0 30px rgba(0, 102, 204, 0.3)",
                       "0 0 50px rgba(0, 102, 204, 0.5)",
                       "0 0 30px rgba(0, 102, 204, 0.3)",
-                    ],
+                      ],
                     rotateY: [0, 5, -5, 0],
-                  }
+                    }
               }
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               className="absolute inset-0 rounded-3xl bg-gradient-to-br from-brand-blue/20 to-brand-blue/5 tunisian-border floating-3d glass-effect"
@@ -365,7 +365,7 @@ export function Hero() {
         transition={{ delay: 1, duration: 0.5 }}
         className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10"
         suppressHydrationWarning
-      >
+        >
         <ScrollIndicator />
       </motion.div>
     </section>

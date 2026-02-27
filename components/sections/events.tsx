@@ -86,11 +86,17 @@ export function Events() {
   const [selectedEvent, setSelectedEvent] = useState<typeof featuredEvent | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showAnimated, setShowAnimated] = useState(false);
+  const [tabsMounted, setTabsMounted] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setShowAnimated(true);
+  }, []);
+
+  // Mount Tabs only on the client to avoid SSR hydration id mismatches from Radix Tabs
+  useEffect(() => {
+    setTabsMounted(true);
   }, []);
 
   useEffect(() => {
@@ -226,52 +232,54 @@ export function Events() {
           transition={{ duration: 0.6, delay: 0.1 }}
           suppressHydrationWarning
         >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-8 grid w-full max-w-md mx-auto grid-cols-2">
-              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              <TabsTrigger value="past">Past Events</TabsTrigger>
-            </TabsList>
+          {tabsMounted && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="mb-8 grid w-full max-w-md mx-auto grid-cols-2">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="past">Past Events</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="upcoming" className="mt-4">
-              <motion.div
-                key={`upcoming-${activeTab}`}
-                initial={{ opacity: 1, y: 0 }}
-                animate={showAnimated && !prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                exit={showAnimated && !prefersReducedMotion ? { opacity: 0, y: -20 } : { opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="grid gap-6 md:grid-cols-2"
-                suppressHydrationWarning
-              >
-                {upcomingEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onClick={() => handleEventClick(event)}
-                  />
-                ))}
-              </motion.div>
-            </TabsContent>
+              <TabsContent value="upcoming" className="mt-4">
+                <motion.div
+                  key={`upcoming-${activeTab}`}
+                  initial={{ opacity: 1, y: 0 }}
+                  animate={showAnimated && !prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+                  exit={showAnimated && !prefersReducedMotion ? { opacity: 0, y: -20 } : { opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="grid gap-6 md:grid-cols-2"
+                  suppressHydrationWarning
+                >
+                  {upcomingEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onClick={() => handleEventClick(event)}
+                    />
+                  ))}
+                </motion.div>
+              </TabsContent>
 
-            <TabsContent value="past" className="mt-4">
-              <motion.div
-                key={`past-${activeTab}`}
-                initial={{ opacity: 1, y: 0 }}
-                animate={showAnimated && !prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-                exit={showAnimated && !prefersReducedMotion ? { opacity: 0, y: -20 } : { opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="grid gap-6 md:grid-cols-2"
-                suppressHydrationWarning
-              >
-                {pastEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onClick={() => handleEventClick(event)}
-                  />
-                ))}
-              </motion.div>
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="past" className="mt-4">
+                <motion.div
+                  key={`past-${activeTab}`}
+                  initial={{ opacity: 1, y: 0 }}
+                  animate={showAnimated && !prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
+                  exit={showAnimated && !prefersReducedMotion ? { opacity: 0, y: -20 } : { opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="grid gap-6 md:grid-cols-2"
+                  suppressHydrationWarning
+                >
+                  {pastEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onClick={() => handleEventClick(event)}
+                    />
+                  ))}
+                </motion.div>
+              </TabsContent>
+            </Tabs>
+          )}
         </motion.div>
 
         {/* Event Gallery Marquee */}

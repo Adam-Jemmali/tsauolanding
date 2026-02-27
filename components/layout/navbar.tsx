@@ -36,11 +36,26 @@ export function Navbar() {
   }, [isMounted]);
 
   const handleNavClick = (href: string) => {
-    setIsMobileMenuOpen(false);
     if (typeof window === "undefined") return;
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+
+    const target = document.querySelector(href);
+    if (!target) {
+      // Still close the menu even if the target isn't found
+      setIsMobileMenuOpen(false);
+      return;
+    }
+
+    const lenis = (window as any).lenis;
+
+    // Close the mobile menu first so the scroll happens on the main content
+    setIsMobileMenuOpen(false);
+
+    // Use Lenis smooth scroll when available (works better on mobile)
+    if (lenis && typeof lenis.scrollTo === "function") {
+      lenis.scrollTo(target, { offset: -80 });
+    } else {
+      // Fallback to native smooth scroll
+      (target as HTMLElement).scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -121,6 +136,7 @@ export function Navbar() {
               {navLinks.map((link) => (
                 <button
                   key={link.href}
+                  type="button"
                   onClick={() => handleNavClick(link.href)}
                   className="text-left text-lg font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
@@ -128,10 +144,8 @@ export function Navbar() {
                 </button>
               ))}
               <Button
-                onClick={() => {
-                  setIsMobileMenuOpen(false);
-                  handleNavClick("#contact");
-                }}
+                type="button"
+                onClick={() => handleNavClick("#contact")}
                 className="mt-2 bg-brand-blue hover:bg-brand-blue-dark text-white"
               >
                 Contact Us
@@ -154,8 +168,8 @@ export function Navbar() {
             : {}
         }
         className={`fixed left-0 right-0 top-0 z-40 transition-all duration-300 ${isScrolled
-            ? "navbar-backdrop border-b border-border/50 shadow-soft"
-            : "bg-transparent"
+          ? "navbar-backdrop border-b border-border/50 shadow-soft"
+          : "bg-transparent"
           }`}
         suppressHydrationWarning
       >

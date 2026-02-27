@@ -18,7 +18,7 @@ export default function Home() {
         <MorphingShapes />
         <GSAPScrollEffects />
         <HypnoticScroll />
-        <Navbar />
+      <Navbar />
         <HeroScrollSequenceClient />
         <BeachScrollSequenceClient
           infiniteLoop={false}
@@ -33,12 +33,12 @@ export default function Home() {
             },
           ]}
         />
-        <About />
-        <Events />
-        <Team />
-        <Contact />
-        <Footer />
-      </main>
+      <About />
+      <Events />
+      <Team />
+      <Contact />
+      <Footer />
+    </main>
     </SmoothScroll>
   );
 }
