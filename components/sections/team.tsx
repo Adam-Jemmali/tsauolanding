@@ -15,7 +15,7 @@ const teamMembers = [
   {
     name: "Emna Hamida & Mariam Trabelsi",
     role: "Vice Presidents",
-    bio: "Ensuring smooth operations and memorable experiences.",
+    bio: " The 2 smooth operators of the club",
     image: "/team/vps.png",
   },
   {
@@ -26,7 +26,7 @@ const teamMembers = [
   },
   {
     name: "Sabrina Temini & Aicha Ben Miled",
-    role: "Vp Events",
+    role: "VP Events",
     bio: "Two brains working together to make events unforgettable",
     image: "/team/vp events.png",
   },
@@ -39,7 +39,7 @@ const teamMembers = [
   {
     name: "Nour G-Mekki & Nour Benfekih",
     role: "VP Social Media",
-    bio: "same name , same social media",
+    bio: "same name , same mission",
     image: "/team/vp socials.png",
   },
   {

@@ -125,7 +125,7 @@ export function Hero() {
   const imageY = useTransform(scrollYProgress, [0, 1], [0, -100]);
   const imageScale = useTransform(scrollYProgress, [0, 1], [1, 0.95]);
   const contentY = useTransform(scrollYProgress, [0, 0.5], [0, -50]);
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const contentOpacity = useTransform(scrollYProgress, [0.05, 0.5], [1, 0]);
 
   useEffect(() => {
     if (prefersReducedMotion || !heroRef.current || typeof window === "undefined") return;
@@ -144,18 +144,18 @@ export function Hero() {
     }
 
     // Content parallax
-    if (contentRef.current) {
-      gsap.to(contentRef.current, {
-        y: -50,
-        opacity: 0,
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: "top top",
-          end: "center top",
-          scrub: 1,
-        },
-      });
-    }
+    // if (contentRef.current) {
+    //   gsap.to(contentRef.current, {
+    //     y: -50,
+    //     opacity: 0,
+    //     scrollTrigger: {
+    //       trigger: heroRef.current,
+    //       start: "top top",
+    //       end: "center top",
+    //       scrub: 1,
+    //     },
+    //   });
+    // }
 
     // Image 3D rotation on mouse move
     if (imageRef.current) {
@@ -274,7 +274,7 @@ export function Hero() {
             University of Ottawa
           </p>
 
-          <p className="mb-8 text-lg text-muted-foreground sm:text-xl">
+          <p className="mb-8 text-lg text-white  sm:text-xl"  >
             Celebrating Tunisian culture, building community, and creating lasting connections at uOttawa.
             Open to all students who want to experience our vibrant culture and traditions.
           </p>

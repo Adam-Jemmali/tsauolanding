@@ -11,7 +11,7 @@ const TOTAL_FRAMES = FRAME_END - FRAME_START + 1;
 
 function frameSrc(index: number): string {
   const frameNum = String(index + 1).padStart(3, "0");
-  return `/sequence2/sidibousaid/ezgif-frame-${frameNum}.png`;
+  return `/sequence2s/sidibousaid/ezgif-frame-${frameNum}.png`;
 }
 
 function getOpacity(progress: number, inStart: number, inEnd: number, outStart: number, outEnd: number): number {
@@ -262,8 +262,9 @@ export function HeroScrollSequence() {
                 <motion.p
                   initial={false}
                   animate={{ opacity: descriptionOpacity }}
-                  className="mb-8 text-muted-foreground text-base md:text-lg leading-relaxed"
+                  className="mb-8 text-muted-foreground  text-white text-base md:text-lg leading-relaxed"
                   suppressHydrationWarning
+
                 >
                   Celebrating Tunisian culture, building community, and creating lasting connections at uOttawa. Open to all students who want to experience our vibrant culture and traditions.
                 </motion.p>
