@@ -48,6 +48,10 @@ export default function RootLayout({
           name="format-detection"
           content="telephone=no, date=no, email=no, address=no"
         />
+        {/* Preload first frames of scroll sequences so they appear instantly */}
+        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-001.png" />
+        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-002.png" />
+        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-003.png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}

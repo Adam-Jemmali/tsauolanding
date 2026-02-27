@@ -60,16 +60,17 @@ export function BeachScrollSequence({
   const prefersReducedMotion = useReducedMotion();
   const lastDrawnFrameRef = useRef(-1);
 
-  // Load images in batches
+  // Load images in batches — show canvas as soon as first frame is ready
   useEffect(() => {
     const imgs: HTMLImageElement[] = new Array(TOTAL_FRAMES);
     let mounted = true;
     loadedCountRef.current = 0;
 
-    function onImageReady() {
+    function onImageReady(i: number) {
       if (!mounted) return;
       loadedCountRef.current++;
-      if (loadedCountRef.current >= TOTAL_FRAMES) {
+      // Show canvas as soon as frame 1 is loaded
+      if (i === 0 && !ready) {
         setReady(true);
       }
     }
@@ -79,11 +80,12 @@ export function BeachScrollSequence({
         const img = new Image();
         if (i < 5) (img as any).fetchPriority = "high";
         img.src = frameSrc(i);
+        const idx = i;
         img.onload = () => {
-          imgs[i] = img;
-          onImageReady();
+          imgs[idx] = img;
+          onImageReady(idx);
         };
-        img.onerror = onImageReady;
+        img.onerror = () => onImageReady(idx);
       }
     }
 
@@ -160,7 +162,7 @@ export function BeachScrollSequence({
     lastDrawnFrameRef.current = -1;
   }, [dimensions]);
 
-  // Draw frame
+  // Draw frame — falls back to nearest loaded frame
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -182,7 +184,17 @@ export function BeachScrollSequence({
 
     if (idx === lastDrawnFrameRef.current) return;
 
-    const img = imagesRef.current[idx];
+    let img = imagesRef.current[idx];
+    if (!img || !img.complete || img.naturalWidth === 0) {
+      for (let j = idx - 1; j >= 0; j--) {
+        const fallback = imagesRef.current[j];
+        if (fallback && fallback.complete && fallback.naturalWidth > 0) {
+          img = fallback;
+          break;
+        }
+      }
+    }
+
     if (img && img.complete && img.naturalWidth > 0) {
       ctx.clearRect(0, 0, dw, dh);
       const scale = Math.max(dw / img.naturalWidth, dh / img.naturalHeight);
