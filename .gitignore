@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Old unoptimized sequence images (replaced by /seq-hero and /seq-beach WebP)
+/public/sequence/
+/public/sequence2s/
+
+# Build scripts
+/scripts/

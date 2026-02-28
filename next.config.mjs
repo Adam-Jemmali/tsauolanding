@@ -19,9 +19,9 @@ const nextConfig = {
   // Aggressive caching & security headers for Vercel edge
   async headers() {
     return [
-      // ─── Sequence images — immutable forever ───────────────────────
+      // ─── Optimized WebP sequence images — immutable forever ─────────
       {
-        source: "/sequence/:path*",
+        source: "/seq-hero/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
           { key: "CDN-Cache-Control", value: "public, max-age=31536000, immutable" },
@@ -29,7 +29,7 @@ const nextConfig = {
         ],
       },
       {
-        source: "/sequence2s/:path*",
+        source: "/seq-beach/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
           { key: "CDN-Cache-Control", value: "public, max-age=31536000, immutable" },

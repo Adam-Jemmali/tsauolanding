@@ -70,11 +70,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://vercel.live" crossOrigin="anonymous" />
 
         {/* ── Preload first 5 hero frames so canvas paints immediately ── */}
-        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-001.png" />
-        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-002.png" />
-        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-003.png" />
-        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-004.png" />
-        <link rel="preload" as="image" href="/sequence2s/sidibousaid/ezgif-frame-005.png" />
+        <link rel="preload" as="image" href="/seq-hero/frame-001.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/seq-hero/frame-002.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/seq-hero/frame-003.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/seq-hero/frame-004.webp" type="image/webp" />
+        <link rel="preload" as="image" href="/seq-hero/frame-005.webp" type="image/webp" />
 
         {/* ── Prefetch the logo so navbar renders instantly ── */}
         <link rel="preload" as="image" href="/logo.png" />

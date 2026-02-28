@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import NextImage from "next/image";
 import { Calendar, ArrowRight } from "lucide-react";
 
-const TOTAL_FRAMES = 240;
+const TOTAL_FRAMES = 120;
 
 // Detect connection speed & choose batch size accordingly
 function getBatchSize(): number {
@@ -26,7 +26,7 @@ function getCanvasDPR(): number {
 
 function frameSrc(index: number): string {
   const frameNum = String(index + 1).padStart(3, "0");
-  return `/sequence2s/sidibousaid/ezgif-frame-${frameNum}.png`;
+  return `/seq-hero/frame-${frameNum}.webp`;
 }
 
 function getOpacity(

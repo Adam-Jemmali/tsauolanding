@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import NextImage from "next/image";
 
-const TOTAL_FRAMES = 240;
+const TOTAL_FRAMES = 120;
 
 function getBatchSize(): number {
   if (typeof navigator === "undefined") return 20;
@@ -23,7 +23,7 @@ function getCanvasDPR(): number {
 
 function frameSrc(index: number): string {
   const frameNum = String(index + 1).padStart(3, "0");
-  return `/sequence/beach/ezgif-frame-${frameNum}.png`;
+  return `/seq-beach/frame-${frameNum}.webp`;
 }
 
 interface TextOverlay {
