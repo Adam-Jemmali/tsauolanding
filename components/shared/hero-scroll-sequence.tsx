@@ -6,7 +6,23 @@ import NextImage from "next/image";
 import { Calendar, ArrowRight } from "lucide-react";
 
 const TOTAL_FRAMES = 240;
-const BATCH_SIZE = 20;
+
+// Detect connection speed & choose batch size accordingly
+function getBatchSize(): number {
+  if (typeof navigator === "undefined") return 20;
+  const conn = (navigator as any).connection;
+  if (!conn) return 20;
+  const ect = conn.effectiveType;
+  if (ect === "4g") return 30;
+  if (ect === "3g") return 10;
+  return 6; // 2g / slow-2g
+}
+
+// Lower DPR on mobile to save GPU work
+function getCanvasDPR(): number {
+  if (typeof window === "undefined") return 1;
+  return Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2);
+}
 
 function frameSrc(index: number): string {
   const frameNum = String(index + 1).padStart(3, "0");
@@ -38,32 +54,29 @@ export function HeroScrollSequence() {
   const progressRef = useRef(0);
   const [progress, setProgress] = useState(0);
   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
-  const loadedCountRef = useRef(0);
   const [ready, setReady] = useState(false);
   const rafRef = useRef(0);
   const isVisibleRef = useRef(true);
   const prefersReducedMotion = useReducedMotion();
   const lastDrawnFrameRef = useRef(-1);
 
-  // Load images in batches — show canvas as soon as first frame is ready
+  // Load images in network-aware batches
   useEffect(() => {
     const imgs: HTMLImageElement[] = new Array(TOTAL_FRAMES);
     let mounted = true;
-    loadedCountRef.current = 0;
+    const BATCH = getBatchSize();
 
     function onImageReady(i: number) {
       if (!mounted) return;
-      loadedCountRef.current++;
-      // Show canvas as soon as frame 1 is loaded (don't wait for all 240)
-      if (i === 0 && !ready) {
-        setReady(true);
-      }
+      if (i === 0 && !ready) setReady(true);
     }
 
     function loadBatch(start: number, end: number) {
       for (let i = start; i < end && i < TOTAL_FRAMES; i++) {
         const img = new Image();
-        if (i < 5) (img as any).fetchPriority = "high";
+        // First 10 frames high priority
+        if (i < 10) (img as any).fetchPriority = "high";
+        img.decoding = "async";
         img.src = frameSrc(i);
         const idx = i;
         img.onload = () => {
@@ -75,21 +88,28 @@ export function HeroScrollSequence() {
     }
 
     // Load first batch immediately
-    loadBatch(0, BATCH_SIZE);
+    loadBatch(0, BATCH);
     imagesRef.current = imgs;
 
-    // Schedule remaining batches
+    // Schedule remaining batches — use requestIdleCallback when available
     let batch = 1;
     function scheduleNext() {
       if (!mounted) return;
-      const start = batch * BATCH_SIZE;
+      const start = batch * BATCH;
       if (start >= TOTAL_FRAMES) return;
-      const end = Math.min(start + BATCH_SIZE, TOTAL_FRAMES);
-      setTimeout(() => {
+      const end = Math.min(start + BATCH, TOTAL_FRAMES);
+
+      const schedule =
+        typeof requestIdleCallback !== "undefined"
+          ? (cb: () => void) => requestIdleCallback(cb, { timeout: 100 })
+          : (cb: () => void) => setTimeout(cb, 30);
+
+      schedule(() => {
+        if (!mounted) return;
         loadBatch(start, end);
         batch++;
         scheduleNext();
-      }, 50);
+      });
     }
     scheduleNext();
 
@@ -112,52 +132,65 @@ export function HeroScrollSequence() {
     return () => obs.disconnect();
   }, []);
 
-  // Scroll progress
+  // Scroll progress — only setState when text overlays would visibly change
   useEffect(() => {
+    let ticking = false;
     const onScroll = () => {
-      const el = containerRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const scrollable = el.scrollHeight - window.innerHeight;
-      const p = Math.min(Math.max(-rect.top / scrollable, 0), 1);
-      progressRef.current = p;
-      setProgress(p);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const el = containerRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const scrollable = el.scrollHeight - window.innerHeight;
+        const p = Math.min(Math.max(-rect.top / scrollable, 0), 1);
+        progressRef.current = p;
+        setProgress((prev) => (Math.abs(prev - p) > 0.005 ? p : prev));
+      });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Dimensions
+  // Dimensions (debounced resize)
   useEffect(() => {
+    let resizeTimer: ReturnType<typeof setTimeout>;
     const update = () =>
       setDimensions({ w: window.innerWidth, h: window.innerHeight });
     update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(update, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      clearTimeout(resizeTimer);
+    };
   }, []);
 
   // Canvas setup
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || dimensions.w === 0) return;
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    const dpr = getCanvasDPR();
     canvas.width = dimensions.w * dpr;
     canvas.height = dimensions.h * dpr;
     const ctx = canvas.getContext("2d");
     if (ctx) ctx.scale(dpr, dpr);
-    lastDrawnFrameRef.current = -1; // force redraw after resize
+    lastDrawnFrameRef.current = -1;
   }, [dimensions]);
 
-  // Draw frame — only redraws when frame index changes
-  // Falls back to nearest loaded frame if current isn't ready yet
+  // Draw frame — only redraws when frame index changes, falls back to nearest loaded
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    const dpr = getCanvasDPR();
     const dw = canvas.width / dpr;
     const dh = canvas.height / dpr;
     if (dw === 0 || dh === 0) return;
@@ -167,13 +200,10 @@ export function HeroScrollSequence() {
       TOTAL_FRAMES - 1
     );
 
-    // Skip if same frame
     if (idx === lastDrawnFrameRef.current) return;
 
-    // Find the best available frame (exact or nearest loaded below)
     let img = imagesRef.current[idx];
     if (!img || !img.complete || img.naturalWidth === 0) {
-      // Fallback: find the nearest loaded frame below current index
       for (let j = idx - 1; j >= 0; j--) {
         const fallback = imagesRef.current[j];
         if (fallback && fallback.complete && fallback.naturalWidth > 0) {
@@ -224,11 +254,18 @@ export function HeroScrollSequence() {
       id="hero"
       style={{ position: "relative" }}
     >
-      <div className="sticky top-0 h-screen w-full overflow-hidden bg-gradient-to-br from-brand-blue/5 via-white to-brand-blue/10">
+      <div
+        className="sticky top-0 h-screen w-full overflow-hidden bg-gradient-to-br from-brand-blue/5 via-white to-brand-blue/10"
+        style={{ willChange: "transform" }}
+      >
         <canvas
           ref={canvasRef}
           className="absolute inset-0 h-full w-full"
-          style={{ width: dimensions.w, height: dimensions.h }}
+          style={{
+            width: dimensions.w,
+            height: dimensions.h,
+            willChange: "contents",
+          }}
         />
 
         {/* Fallback */}
@@ -281,7 +318,7 @@ export function HeroScrollSequence() {
 
               {descriptionOpacity > 0 && (
                 <p
-                  className="mb-8 text-muted-foreground  text-white text-base md:text-lg leading-relaxed"
+                  className="mb-8 text-muted-foreground text-white text-base md:text-lg leading-relaxed"
                   style={{ opacity: descriptionOpacity }}
                 >
                   Celebrating Tunisian culture, building community, and creating

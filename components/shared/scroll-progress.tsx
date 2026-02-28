@@ -13,15 +13,21 @@ export function ScrollProgress() {
   useEffect(() => {
     if (!isMounted) return;
 
+    let ticking = false;
     const updateProgress = () => {
-      const scrollTop = window.scrollY;
-      const docHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const scrollProgress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const scrollTop = window.scrollY;
+        const docHeight =
+          document.documentElement.scrollHeight - window.innerHeight;
+        const scrollProgress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
 
-      if (progressRef.current) {
-        progressRef.current.style.width = `${scrollProgress}%`;
-      }
+        if (progressRef.current) {
+          progressRef.current.style.width = `${scrollProgress}%`;
+        }
+      });
     };
 
     window.addEventListener("scroll", updateProgress, { passive: true });

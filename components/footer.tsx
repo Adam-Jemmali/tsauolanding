@@ -1,5 +1,3 @@
-"use client";
-
 import { Instagram, Mail, Music2 } from "lucide-react";
 
 const quickLinks = [
@@ -28,15 +26,6 @@ const socialLinks = [
 ];
 
 export function Footer() {
-  const handleNavClick = (href: string) => {
-    if (href.startsWith("#")) {
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-  };
-
   return (
     <footer className="border-t border-border bg-muted/30">
       <div className="container mx-auto px-4 py-12">
@@ -58,14 +47,13 @@ export function Footer() {
             <h3 className="font-semibold">Quick Links</h3>
             <nav className="flex flex-col gap-2">
               {quickLinks.map((link) => (
-                <button
+                <a
                   key={link.href}
-                  type="button"
-                  onClick={() => handleNavClick(link.href)}
+                  href={link.href}
                   className="text-left text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   {link.label}
-                </button>
+                </a>
               ))}
             </nav>
           </div>
@@ -98,7 +86,7 @@ export function Footer() {
         {/* Copyright */}
         <div className="mt-12 border-t border-border pt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TSA @ University of Ottawa.
+            © 2026 TSA @ University of Ottawa.
           </p>
         </div>
       </div>

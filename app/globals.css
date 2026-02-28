@@ -77,6 +77,8 @@
 html {
   scroll-behavior: smooth;
   position: relative;
+  touch-action: manipulation; /* Kill 300 ms tap delay on mobile */
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -84,6 +86,16 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-feature-settings: "rlig" 1, "calt" 1;
+  touch-action: manipulation;
+  /* Prevent layout shifts from scroll-bars appearing */
+  overflow-x: hidden;
+}
+
+/* Optimised font rendering */
+* {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Scroll progress bar */
@@ -181,11 +193,25 @@ body {
 .section-padding {
   padding-top: 6rem;
   padding-bottom: 6rem;
+  /* Skip rendering off-screen sections — massive paint-time savings on initial load */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
 }
 
 @media (min-width: 768px) {
   .section-padding {
     padding-top: 8rem;
     padding-bottom: 8rem;
+    contain-intrinsic-size: auto 800px;
   }
+}
+
+/* GPU-accelerated sticky containers */
+.sticky {
+  will-change: transform;
+}
+
+/* Reduce paint area for fixed elements */
+.fixed {
+  contain: layout style;
 }

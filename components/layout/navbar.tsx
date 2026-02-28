@@ -27,8 +27,14 @@ export function Navbar() {
   useEffect(() => {
     if (!isMounted || typeof window === "undefined") return;
 
+    let ticking = false;
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        setIsScrolled(window.scrollY > 20);
+      });
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -38,13 +44,17 @@ export function Navbar() {
   const handleNavClick = (href: string) => {
     if (typeof window === "undefined") return;
 
-    // Close mobile menu first
+    // Close mobile menu immediately
     setIsMobileMenuOpen(false);
 
-    const target = document.querySelector(href);
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
-    }
+    // Delay scroll slightly so the menu close doesn't fight the scroll on mobile
+    // Without this, mobile browsers treat the first tap as "close menu" and require a second tap
+    setTimeout(() => {
+      const target = document.querySelector(href);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 10);
   };
 
   return (
@@ -143,22 +153,30 @@ export function Navbar() {
             >
               <div className="container mx-auto flex flex-col gap-4 px-4 py-6">
                 {navLinks.map((link) => (
-                  <button
+                  <a
                     key={link.href}
-                    type="button"
-                    onClick={() => handleNavClick(link.href)}
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavClick(link.href);
+                    }}
                     className="text-left text-lg font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    style={{ touchAction: "manipulation" }}
                   >
                     {link.label}
-                  </button>
+                  </a>
                 ))}
-                <Button
-                  type="button"
-                  onClick={() => handleNavClick("#contact")}
-                  className="mt-2 bg-brand-blue hover:bg-brand-blue-dark text-white"
+                <a
+                  href="#contact"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNavClick("#contact");
+                  }}
+                  className="mt-2 inline-flex items-center justify-center rounded-md text-sm font-medium bg-brand-blue hover:bg-brand-blue-dark text-white h-10 px-4 py-2"
+                  style={{ touchAction: "manipulation" }}
                 >
                   Contact Us
-                </Button>
+                </a>
               </div>
             </motion.div>
           )}

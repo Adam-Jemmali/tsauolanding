@@ -5,7 +5,21 @@ import { motion, useReducedMotion } from "framer-motion";
 import NextImage from "next/image";
 
 const TOTAL_FRAMES = 240;
-const BATCH_SIZE = 20;
+
+function getBatchSize(): number {
+  if (typeof navigator === "undefined") return 20;
+  const conn = (navigator as any).connection;
+  if (!conn) return 20;
+  const ect = conn.effectiveType;
+  if (ect === "4g") return 30;
+  if (ect === "3g") return 10;
+  return 6;
+}
+
+function getCanvasDPR(): number {
+  if (typeof window === "undefined") return 1;
+  return Math.min(window.devicePixelRatio, window.innerWidth < 768 ? 1.5 : 2);
+}
 
 function frameSrc(index: number): string {
   const frameNum = String(index + 1).padStart(3, "0");
@@ -53,32 +67,44 @@ export function BeachScrollSequence({
   const progressRef = useRef(0);
   const [progress, setProgress] = useState(0);
   const [dimensions, setDimensions] = useState({ w: 0, h: 0 });
-  const loadedCountRef = useRef(0);
   const [ready, setReady] = useState(false);
   const rafRef = useRef(0);
   const isVisibleRef = useRef(false);
   const prefersReducedMotion = useReducedMotion();
   const lastDrawnFrameRef = useRef(-1);
+  const startedLoadingRef = useRef(false);
 
-  // Load images in batches — show canvas as soon as first frame is ready
+  // Observe container — start loading when within 1 screen of viewport
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el || startedLoadingRef.current) return;
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !startedLoadingRef.current) {
+          startedLoadingRef.current = true;
+          loadImages();
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "100% 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  function loadImages() {
     const imgs: HTMLImageElement[] = new Array(TOTAL_FRAMES);
-    let mounted = true;
-    loadedCountRef.current = 0;
+    const BATCH = getBatchSize();
 
     function onImageReady(i: number) {
-      if (!mounted) return;
-      loadedCountRef.current++;
-      // Show canvas as soon as frame 1 is loaded
-      if (i === 0 && !ready) {
-        setReady(true);
-      }
+      if (i === 0) setReady(true);
     }
 
     function loadBatch(start: number, end: number) {
       for (let i = start; i < end && i < TOTAL_FRAMES; i++) {
         const img = new Image();
-        if (i < 5) (img as any).fetchPriority = "high";
+        img.decoding = "async";
         img.src = frameSrc(i);
         const idx = i;
         img.onload = () => {
@@ -89,27 +115,28 @@ export function BeachScrollSequence({
       }
     }
 
-    loadBatch(0, BATCH_SIZE);
+    loadBatch(0, BATCH);
     imagesRef.current = imgs;
 
     let batch = 1;
     function scheduleNext() {
-      if (!mounted) return;
-      const start = batch * BATCH_SIZE;
+      const start = batch * BATCH;
       if (start >= TOTAL_FRAMES) return;
-      const end = Math.min(start + BATCH_SIZE, TOTAL_FRAMES);
-      setTimeout(() => {
+      const end = Math.min(start + BATCH, TOTAL_FRAMES);
+
+      const schedule =
+        typeof requestIdleCallback !== "undefined"
+          ? (cb: () => void) => requestIdleCallback(cb, { timeout: 100 })
+          : (cb: () => void) => setTimeout(cb, 30);
+
+      schedule(() => {
         loadBatch(start, end);
         batch++;
         scheduleNext();
-      }, 50);
+      });
     }
     scheduleNext();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  }
 
   // Track visibility
   useEffect(() => {
@@ -125,36 +152,50 @@ export function BeachScrollSequence({
     return () => obs.disconnect();
   }, []);
 
-  // Scroll progress
+  // Scroll progress — throttled to rAF
   useEffect(() => {
+    let ticking = false;
     const onScroll = () => {
-      const el = containerRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const scrollable = el.scrollHeight - window.innerHeight;
-      const p = Math.min(Math.max(-rect.top / scrollable, 0), 1);
-      progressRef.current = p;
-      setProgress(p);
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const el = containerRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const scrollable = el.scrollHeight - window.innerHeight;
+        const p = Math.min(Math.max(-rect.top / scrollable, 0), 1);
+        progressRef.current = p;
+        setProgress((prev) => (Math.abs(prev - p) > 0.005 ? p : prev));
+      });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Dimensions
+  // Dimensions (debounced)
   useEffect(() => {
+    let resizeTimer: ReturnType<typeof setTimeout>;
     const update = () =>
       setDimensions({ w: window.innerWidth, h: window.innerHeight });
     update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    const onResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(update, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      clearTimeout(resizeTimer);
+    };
   }, []);
 
   // Canvas setup
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || dimensions.w === 0) return;
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    const dpr = getCanvasDPR();
     canvas.width = dimensions.w * dpr;
     canvas.height = dimensions.h * dpr;
     const ctx = canvas.getContext("2d");
@@ -162,14 +203,14 @@ export function BeachScrollSequence({
     lastDrawnFrameRef.current = -1;
   }, [dimensions]);
 
-  // Draw frame — falls back to nearest loaded frame
+  // Draw frame — falls back to nearest loaded
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    const dpr = getCanvasDPR();
     const dw = canvas.width / dpr;
     const dh = canvas.height / dpr;
     if (dw === 0 || dh === 0) return;
@@ -229,11 +270,18 @@ export function BeachScrollSequence({
       id={id}
       style={{ position: "relative" }}
     >
-      <div className="sticky top-0 h-screen w-full overflow-hidden bg-black">
+      <div
+        className="sticky top-0 h-screen w-full overflow-hidden bg-black"
+        style={{ willChange: "transform" }}
+      >
         <canvas
           ref={canvasRef}
           className="absolute inset-0 h-full w-full"
-          style={{ width: dimensions.w, height: dimensions.h }}
+          style={{
+            width: dimensions.w,
+            height: dimensions.h,
+            willChange: "contents",
+          }}
         />
 
         {/* Fallback */}
