@@ -171,10 +171,10 @@ export function Events() {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="mb-8 grid w-full max-w-md mx-auto grid-cols-2">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="past">Past Events</TabsTrigger>
-              </TabsList>
+            <TabsList className="mb-8 grid w-full max-w-md mx-auto grid-cols-2">
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+              <TabsTrigger value="past">Past Events</TabsTrigger>
+            </TabsList>
 
               <TabsContent value="upcoming" className="mt-4">
                 <div className="grid gap-6 md:grid-cols-2">
@@ -199,7 +199,7 @@ export function Events() {
                   ))}
                 </div>
               </TabsContent>
-            </Tabs>
+          </Tabs>
           )}
         </motion.div>
 

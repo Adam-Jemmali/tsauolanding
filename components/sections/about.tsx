@@ -83,19 +83,19 @@ export function About() {
           suppressHydrationWarning
         >
           {features.map((feature) => (
-            <motion.div
-              key={feature.title}
+              <motion.div
+                key={feature.title}
               variants={shouldAnimate ? itemVariants : undefined}
               initial={shouldAnimate ? "hidden" : "visible"}
               suppressHydrationWarning
-            >
+              >
               <Card className="h-full border-none shadow-soft transition-all duration-300 hover:shadow-soft-lg hover:-translate-y-1">
-                <CardContent className="p-6 md:p-8">
-                  <h3 className="mb-3 text-xl font-semibold">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  <CardContent className="p-6 md:p-8">
+                    <h3 className="mb-3 text-xl font-semibold">{feature.title}</h3>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
           ))}
         </motion.div>
       </div>
